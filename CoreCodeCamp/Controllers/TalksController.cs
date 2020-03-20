@@ -48,6 +48,8 @@ namespace CoreCodeCamp.Controllers
             {
                 var talk = await repository.GetTalkByMonikerAsync(moniker, id, true);
 
+                if (talk == null) return NotFound("Couldn't find the talk");
+
                 return mapper.Map<TalkModel>(talk);
             }
             catch (Exception)
@@ -98,5 +100,66 @@ namespace CoreCodeCamp.Controllers
             }
         }
 
+        [HttpPut("{id:int}")]
+        public async Task<ActionResult<TalkModel>> PUT(string moniker, int id, TalkModel model)
+        {
+            try
+            {
+                var talk = await repository.GetTalkByMonikerAsync(moniker, id, true);
+
+                if (talk == null) return NotFound("Couldn't find the talk");
+
+                if (model.Speaker != null)
+                {
+                    var speaker = await repository.GetSpeakerAsync(model.Speaker.SpeakerId);
+
+                    if (speaker != null)
+                    {
+                        talk.Speaker = speaker;
+                    }
+                }
+
+                mapper.Map(model, talk);
+
+                if (await repository.SaveChangesAsync())
+                {
+                    return mapper.Map<TalkModel>(talk);
+                }
+                else
+                {
+                    return BadRequest("Failed to update database");
+                }
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Failed to get Talk");
+            }
+        }
+
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> Delete(string moniker, int id)
+        {
+            try
+            {
+                var talk = await repository.GetTalkByMonikerAsync(moniker, id);
+
+                if (talk == null) return NotFound("Failed to find the talk to delete");
+
+                repository.Delete(talk);
+
+                if (await repository.SaveChangesAsync())
+                {
+                    return Ok();
+                }
+                else
+                {
+                    return BadRequest("Failed to delete talk");
+                }
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Failed to get Talk");
+            }
+        }
     }
 }
